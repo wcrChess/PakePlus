@@ -1,22 +1,295 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <link rel="stylesheet" href="styles.css" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PakePlus App</title>
-        <script type="module" src="/main.js" defer></script>
-    </head>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多商品ROI计算器</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-600: #475569;
+            --gray-900: #0f172a;
+            --spacing: 1.5rem;
+        }
 
-    <body>
-        <main class="container">
-            <h1>Welcome to PakePlus</h1>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-            <form class="row" id="greet-form">
-                <input id="greet-input" placeholder="Enter a name..." />
-                <button type="submit">Greet</button>
-            </form>
-            <p id="greet-msg"></p>
-        </main>
-    </body>
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--gray-100);
+            padding: var(--spacing);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .container {
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        h1 {
+            color: var(--gray-900);
+            font-size: 1.75rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            border-bottom: 2px solid #000; /* 标题底部边框改为黑色 */
+            padding-bottom: 1rem;
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: var(--spacing);
+            margin-bottom: 2rem;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+
+        .product-list {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .product-card {
+            background: var(--gray-50);
+            border: 1px solid #000; /* 商品卡片边框改为黑色 */
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            transition: 0.2s;
+        }
+
+        .product-card:hover {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transform: translateY(-2px);
+        }
+
+        .product-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .product-number {
+            color: var(--gray-600);
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .remove-btn {
+            background: #dc2626;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-group label {
+            color: var(--gray-600);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .input-group input {
+            padding: 0.75rem;
+            border: 1px solid #000; /* 输入框边框改为黑色 */
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            background: white;
+            padding: 1.5rem;
+            border: 1px solid #000; /* 结果区域边框改为黑色 */
+            border-radius: 0.5rem;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            color: var(--gray-600);
+            font-size: 0.9rem;
+        }
+
+        .result-value {
+            color: var(--gray-900);
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            .container {
+                padding: 1.5rem;
+            }
+            .input-grid {
+                grid-template-columns: 1fr;
+            }
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>多商品ROI计算器</h1>
+        <div class="btn-group">
+            <button id="addProduct">+ 添加新商品</button>
+        </div>
+        <div class="product-list" id="productsContainer"></div>
+    </div>
+
+    <script>
+        const productsContainer = document.getElementById('productsContainer');
+        let productCount = 0;
+
+        // 初始化第一个商品条目
+        addNewProductItem();
+
+        document.getElementById('addProduct').addEventListener('click', addNewProductItem);
+
+        function addNewProductItem() {
+            productCount++;
+            const product = document.createElement('div');
+            product.className = 'product-card';
+            product.innerHTML = `
+                <div class="product-header">
+                    <div class="product-number">商品${productCount}</div>
+                    <button class="remove-btn">× 删除</button>
+                </div>
+                <div class="input-grid">
+                    <div class="input-group">
+                        <label>客单价（元）</label>
+                        <input type="number" class="price" step="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label>商品成本（元）</label>
+                        <input type="number" class="cost" step="0.01" required>
+                    </div>
+                    <div class="input-group">
+                        <label>退款比例（x%）</label>
+                        <input type="number" class="refundRate" step="0.01" min="1" max="100" required>
+                    </div>
+                </div>
+                <div class="result-grid">
+                    <div class="result-item">
+                        <span class="result-label">平台服务费</span>
+                        <span class="serviceFee">0.00</span> 元
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">退款费用</span>
+                        <span class="refundFee">0.00</span> 元
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">保本ROI</span>
+                        <span class="breakEvenROI">0.000</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">目标ROI</span>
+                        <span class="designROI">0.000</span>
+                    </div>
+                </div>
+            `;
+
+            // 删除按钮事件
+            product.querySelector('.remove-btn').addEventListener('click', () => {
+                product.remove();
+                updateProductNumbers();
+            });
+
+            // 输入事件监听
+            product.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', () => calculateROI(product));
+            });
+
+            productsContainer.appendChild(product);
+        }
+
+        function updateProductNumbers() {
+            const products = document.querySelectorAll('.product-card');
+            products.forEach((product, index) => {
+                const number = index + 1;
+                product.querySelector('.product-number').textContent = `商品${number}`;
+            });
+            productCount = products.length;
+        }
+
+        function calculateROI(product) {
+            const price = parseFloat(product.querySelector('.price').value) || 0;
+            const cost = parseFloat(product.querySelector('.cost').value) || 0;
+            const refundRate = parseFloat(product.querySelector('.refundRate').value) || 0;
+
+            // 计算费用
+            const serviceFee = (price * 0.02).toFixed(2);
+            const refundFee = (price * (refundRate / 100)).toFixed(2);
+            const denominator = price - (cost + parseFloat(serviceFee) + parseFloat(refundFee));
+
+            // 计算ROI（处理分母为0的情况）
+            const breakEvenROI = denominator === 0 ? '0.000' : (price / denominator).toFixed(3);
+            const designROI = denominator === 0 ? '0.000' : (breakEvenROI / 0.8).toFixed(3);
+
+            // 更新结果
+            product.querySelector('.serviceFee').textContent = serviceFee;
+            product.querySelector('.refundFee').textContent = refundFee;
+            product.querySelector('.breakEvenROI').textContent = breakEvenROI;
+            product.querySelector('.designROI').textContent = designROI;
+        }
+    </script>
+</body>
 </html>
